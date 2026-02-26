@@ -2,58 +2,84 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <title>MC Multi-Icon Generator 1.21.8</title>
+    <title>Ultimate MC Resource Pack Generator</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; color: white; text-align: center; padding: 20px; }
-        .box { background: #2d2d2d; padding: 20px; border-radius: 12px; max-width: 500px; margin: 0 auto; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        .file-row { margin: 15px 0; padding: 10px; border-bottom: 1px solid #444; }
-        select, button { padding: 8px; border-radius: 4px; border: none; margin-top: 5px; }
-        button { background: #e67e22; color: white; font-weight: bold; cursor: pointer; width: 100%; transition: 0.3s; }
-        button:hover { background: #d35400; }
-        .info { font-size: 0.8em; color: #aaa; margin-top: 10px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: #e0e0e0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .container { background: #1e1e1e; padding: 30px; border-radius: 15px; width: 90%; max-width: 600px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .item-row { background: #2a2a2a; margin: 10px 0; padding: 15px; border-radius: 8px; border-left: 5px solid #3498db; position: relative; }
+        input[type="file"] { margin-bottom: 10px; }
+        .controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        button { cursor: pointer; border: none; border-radius: 5px; font-weight: bold; transition: 0.2s; }
+        .btn-add { background: #2ecc71; color: white; padding: 10px 20px; margin-bottom: 20px; }
+        .btn-generate { background: #3498db; color: white; padding: 15px; width: 100%; font-size: 1.1em; }
+        .btn-remove { background: #e74c3c; color: white; padding: 5px 10px; font-size: 0.8em; }
+        select, input[type="text"] { background: #333; color: white; border: 1px solid #444; padding: 5px; border-radius: 4px; }
+        .char-code { color: #f1c40f; font-family: monospace; font-weight: bold; }
     </style>
 </head>
 <body>
 
-<div class="box">
-    <h1>Generator 1.21.8</h1>
-    <p>Dodaj obrazy i wybierz ich przeznaczenie:</p>
+<div class="container">
+    <h1>Generator Ikon & Fontów</h1>
+    <p>Dodaj obrazki, a ja przypiszę im kody do gry.</p>
     
-    <div class="file-row">
-        <label>1. Ikona/Ranga (Scoreboard/Tab):</label><br>
-        <input type="file" id="img_small" accept="image/png">
-        <select id="size_small"><option value="16">16x16</option><option value="32">32x32</option></select>
-    </div>
-
-    <div class="file-row">
-        <label>2. Logo / Duża Ikona (GUI):</label><br>
-        <input type="file" id="img_large" accept="image/png">
-        <select id="size_large"><option value="128">128x128</option><option value="256">256x256</option></select>
-    </div>
-
-    <button onclick="generatePack()">GENERUJ PACZKĘ .ZIP</button>
+    <button class="btn-add" onclick="addRow()">+ Dodaj kolejny obrazek</button>
     
-    <div class="info">
-        Paczka będzie miała format 34 (Minecraft 1.21.x).<br>
-        Pliki trafią do: assets/minecraft/textures/gui/...
-    </div>
+    <div id="items-list">
+        </div>
+
+    <button class="btn-generate" onclick="buildPack()">GENERUJE PACZKĘ .ZIP</button>
+    
+    <p style="font-size: 0.8em; color: #888; margin-top: 15px;">
+        Wersja: 1.21.8 | Format: 34 | Folder: assets/minecraft/font
+    </p>
 </div>
 
-<canvas id="ctx_canvas" style="display:none;"></canvas>
+<canvas id="canvas" style="display:none;"></canvas>
 
 <script>
+let rowCount = 0;
+
+// Funkcja dodająca nowy wiersz dla obrazka
+function addRow() {
+    rowCount++;
+    const hexCode = (0xE000 + rowCount).toString(16).toUpperCase();
+    const div = document.createElement('div');
+    div.className = 'item-row';
+    div.id = `row-${rowCount}`;
+    div.innerHTML = `
+        <div style="display:flex; justify-content:space-between;">
+            <span class="char-code">Kod w grze: \\u${hexCode}</span>
+            <button class="btn-remove" onclick="document.getElementById('row-${rowCount}').remove()">X</button>
+        </div>
+        <div class="controls">
+            <input type="file" class="file-input" accept="image/png">
+            <label>Rozmiar:</label>
+            <select class="size-input">
+                <option value="16">16x16 (Ranga)</option>
+                <option value="32">32x32 (Ikona)</option>
+                <option value="128">128x128 (Logo)</option>
+                <option value="256">256x256 (Wielkie)</option>
+            </select>
+            <input type="hidden" class="hex-val" value="\\u${hexCode}">
+        </div>
+    `;
+    document.getElementById('items-list').appendChild(div);
+}
+
+// Przetwarzanie obrazu na Blob
 async function processImage(file, size) {
     return new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = (e) => {
             const img = new Image();
             img.onload = () => {
-                const canvas = document.getElementById('ctx_canvas');
+                const canvas = document.getElementById('canvas');
+                const ctx = canvas.getContext('2d');
                 canvas.width = size;
                 canvas.height = size;
-                const ctx = canvas.getContext('2d');
                 ctx.clearRect(0, 0, size, size);
                 ctx.drawImage(img, 0, 0, size, size);
                 canvas.toBlob(resolve, 'image/png');
@@ -64,42 +90,52 @@ async function processImage(file, size) {
     });
 }
 
-async function generatePack() {
+// Główna funkcja budująca ZIP
+async function buildPack() {
     const zip = new JSZip();
+    const rows = document.querySelectorAll('.item-row');
     
-    // Plik meta
-    const mcmeta = { "pack": { "pack_format": 34, "description": "Custom Icons & Logos" } };
-    zip.file("pack.mcmeta", JSON.stringify(mcmeta, null, 4));
+    if (rows.length === 0) return alert("Dodaj przynajmniej jeden obrazek!");
 
-    const smallFile = document.getElementById('img_small').files[0];
-    const largeFile = document.getElementById('img_large').files[0];
+    const providers = [];
+    const fontFolder = zip.folder("assets/minecraft/textures/font");
+    
+    for (let i = 0; i < rows.length; i++) {
+        const file = rows[i].querySelector('.file-input').files[0];
+        const size = parseInt(rows[i].querySelector('.size-input').value);
+        const charCode = rows[i].querySelector('.hex-val').value;
+        const fileName = `icon_${i}.png`;
 
-    if (!smallFile && !largeFile) {
-        alert("Wgraj chociaż jeden plik!");
-        return;
+        if (file) {
+            const blob = await processImage(file, size);
+            fontFolder.file(fileName, blob);
+            
+            // Dodawanie wpisu do pliku fontów
+            providers.push({
+                "type": "bitmap",
+                "file": `minecraft:font/${fileName}`,
+                "ascent": 8,
+                "height": 8, // Możesz zmienić na 'size/2' jeśli chcesz gigantyczne ikony
+                "chars": [charCode]
+            });
+        }
     }
 
-    // Ścieżka w Resource Packu
-    const guiFolder = zip.folder("assets/minecraft/textures/gui");
+    // 1. pack.mcmeta
+    zip.file("pack.mcmeta", JSON.stringify({
+        "pack": { "pack_format": 34, "description": "Custom Font Icons" }
+    }, null, 4));
 
-    // Przetwarzanie małej ikonki (np. do scoreboarda)
-    if (smallFile) {
-        const sizeS = parseInt(document.getElementById('size_small').value);
-        const blobS = await processImage(smallFile, sizeS);
-        guiFolder.file("ranks/small_icon.png", blobS);
-    }
+    // 2. assets/minecraft/font/default.json
+    zip.file("assets/minecraft/font/default.json", JSON.stringify({ "providers": providers }, null, 4));
 
-    // Przetwarzanie dużego logo (np. do menu/gui)
-    if (largeFile) {
-        const sizeL = parseInt(document.getElementById('size_large').value);
-        const blobL = await processImage(largeFile, sizeL);
-        guiFolder.file("logos/large_logo.png", blobL);
-    }
-
-    // Pobieranie
+    // 3. Generowanie i pobieranie
     const content = await zip.generateAsync({type:"blob"});
-    saveAs(content, "MultiSizePack_1.21.8.zip");
+    saveAs(content, "Minecraft_Font_Pack.zip");
 }
+
+// Dodaj pierwszy wiersz na start
+addRow();
 </script>
 
 </body>
