@@ -2,85 +2,103 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MC Texture Pack Generator 1.21.8</title>
+    <title>MC Multi-Icon Generator 1.21.8</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 50px; background: #2c3e50; color: white; }
-        .container { background: #34495e; padding: 30px; border-radius: 15px; display: inline-block; }
-        input, select, button { margin: 10px; padding: 10px; border-radius: 5px; border: none; }
-        button { background: #27ae60; color: white; cursor: pointer; font-weight: bold; }
-        button:hover { background: #2ecc71; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; color: white; text-align: center; padding: 20px; }
+        .box { background: #2d2d2d; padding: 20px; border-radius: 12px; max-width: 500px; margin: 0 auto; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .file-row { margin: 15px 0; padding: 10px; border-bottom: 1px solid #444; }
+        select, button { padding: 8px; border-radius: 4px; border: none; margin-top: 5px; }
+        button { background: #e67e22; color: white; font-weight: bold; cursor: pointer; width: 100%; transition: 0.3s; }
+        button:hover { background: #d35400; }
+        .info { font-size: 0.8em; color: #aaa; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>Generator Texture Packa (1.21.8)</h1>
-    <p>Wybierz ikonę/rangę (PNG):</p>
-    <input type="file" id="upload" accept="image/png"><br>
+<div class="box">
+    <h1>Generator 1.21.8</h1>
+    <p>Dodaj obrazy i wybierz ich przeznaczenie:</p>
     
-    <p>Rozmiar w grze:</p>
-    <select id="size">
-        <option value="16">16x16</option>
-        <option value="32">32x32</option>
-        <option value="64">64x64</option>
-    </select><br>
+    <div class="file-row">
+        <label>1. Ikona/Ranga (Scoreboard/Tab):</label><br>
+        <input type="file" id="img_small" accept="image/png">
+        <select id="size_small"><option value="16">16x16</option><option value="32">32x32</option></select>
+    </div>
 
-    <button onclick="generate()">Generuj i Pobierz .ZIP</button>
+    <div class="file-row">
+        <label>2. Logo / Duża Ikona (GUI):</label><br>
+        <input type="file" id="img_large" accept="image/png">
+        <select id="size_large"><option value="128">128x128</option><option value="256">256x256</option></select>
+    </div>
+
+    <button onclick="generatePack()">GENERUJ PACZKĘ .ZIP</button>
+    
+    <div class="info">
+        Paczka będzie miała format 34 (Minecraft 1.21.x).<br>
+        Pliki trafią do: assets/minecraft/textures/gui/...
+    </div>
 </div>
 
-<canvas id="canvas" style="display:none;"></canvas>
+<canvas id="ctx_canvas" style="display:none;"></canvas>
 
 <script>
-async function generate() {
-    const fileInput = document.getElementById('upload');
-    const size = parseInt(document.getElementById('size').value);
+async function processImage(file, size) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.getElementById('ctx_canvas');
+                canvas.width = size;
+                canvas.height = size;
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, size, size);
+                ctx.drawImage(img, 0, 0, size, size);
+                canvas.toBlob(resolve, 'image/png');
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+async function generatePack() {
+    const zip = new JSZip();
     
-    if (!fileInput.files[0]) {
-        alert("Najpierw wybierz plik graficzny!");
+    // Plik meta
+    const mcmeta = { "pack": { "pack_format": 34, "description": "Custom Icons & Logos" } };
+    zip.file("pack.mcmeta", JSON.stringify(mcmeta, null, 4));
+
+    const smallFile = document.getElementById('img_small').files[0];
+    const largeFile = document.getElementById('img_large').files[0];
+
+    if (!smallFile && !largeFile) {
+        alert("Wgraj chociaż jeden plik!");
         return;
     }
 
-    const zip = new JSZip();
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    const img = new Image();
+    // Ścieżka w Resource Packu
+    const guiFolder = zip.folder("assets/minecraft/textures/gui");
 
-    // 1. Ładowanie i skalowanie obrazka
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        img.onload = async function() {
-            canvas.width = size;
-            canvas.height = size;
-            ctx.drawImage(img, 0, 0, size, size);
-            
-            // Konwersja canvasu na dane obrazu
-            const imgBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    // Przetwarzanie małej ikonki (np. do scoreboarda)
+    if (smallFile) {
+        const sizeS = parseInt(document.getElementById('size_small').value);
+        const blobS = await processImage(smallFile, sizeS);
+        guiFolder.file("ranks/small_icon.png", blobS);
+    }
 
-            // 2. Struktura plików Minecraft 1.21.x (pack_format: 34)
-            const mcmeta = {
-                "pack": {
-                    "pack_format": 34,
-                    "description": "Wygenerowane przez Generator Ikon"
-                }
-            };
+    // Przetwarzanie dużego logo (np. do menu/gui)
+    if (largeFile) {
+        const sizeL = parseInt(document.getElementById('size_large').value);
+        const blobL = await processImage(largeFile, sizeL);
+        guiFolder.file("logos/large_logo.png", blobL);
+    }
 
-            zip.file("pack.mcmeta", JSON.stringify(mcmeta, null, 4));
-            
-            // Tworzenie folderów i dodanie ikony (zmienia nazwę na rank.png w GUI)
-            const textures = zip.folder("assets/minecraft/textures/gui");
-            textures.file("rank.png", imgBlob);
-
-            // 3. Generowanie ZIP i pobieranie
-            zip.generateAsync({type:"blob"}).then(function(content) {
-                saveAs(content, "TexturePack_1.21.8.zip");
-            });
-        };
-        img.src = e.target.result;
-    };
-    reader.readAsDataURL(fileInput.files[0]);
+    // Pobieranie
+    const content = await zip.generateAsync({type:"blob"});
+    saveAs(content, "MultiSizePack_1.21.8.zip");
 }
 </script>
 
