@@ -2,49 +2,44 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <title>MC Icon Generator 1.21.8 - GitHub Pages</title>
+    <title>Naprawiony Generator Ikon 1.21.8</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: #eee; padding: 40px; display: flex; justify-content: center; }
-        .container { background: #1e1e1e; padding: 30px; border-radius: 15px; width: 100%; max-width: 800px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #333; }
-        h1 { color: #3498db; margin-top: 0; }
-        .item-row { background: #2a2a2a; margin: 15px 0; padding: 15px; border-radius: 8px; display: flex; align-items: center; gap: 15px; border-left: 4px solid #3498db; }
-        .item-row input[type="text"] { width: 80px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: #eee; padding: 20px; text-align: center; }
+        .container { background: #1e1e1e; padding: 25px; border-radius: 15px; max-width: 800px; margin: auto; border: 1px solid #333; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .item-row { background: #2a2a2a; margin: 10px 0; padding: 15px; border-radius: 8px; display: flex; align-items: center; gap: 10px; justify-content: space-between; border-left: 4px solid #f1c40f; }
         input, select { background: #111; color: white; border: 1px solid #444; padding: 8px; border-radius: 5px; }
-        button { cursor: pointer; border: none; border-radius: 5px; font-weight: bold; transition: 0.2s; }
-        .btn-add { background: #27ae60; color: white; padding: 10px 20px; margin-bottom: 20px; }
-        .btn-add:hover { background: #2ecc71; }
-        .btn-gen { background: #3498db; color: white; padding: 15px; width: 100%; font-size: 1.1em; margin-top: 20px; }
-        .btn-remove { background: #e74c3c; color: white; padding: 8px 12px; }
-        .char-info { font-family: monospace; color: #f1c40f; background: #000; padding: 5px; border-radius: 3px; font-size: 0.9em; }
-        #log-area { margin-top: 20px; background: #000; padding: 15px; border-radius: 5px; display: none; white-space: pre-wrap; font-family: monospace; font-size: 0.85em; border: 1px dashed #555; }
+        button { cursor: pointer; border: none; border-radius: 5px; font-weight: bold; padding: 10px 15px; }
+        .btn-add { background: #27ae60; color: white; margin-bottom: 20px; }
+        .btn-gen { background: #3498db; color: white; width: 100%; font-size: 1.1em; margin-top: 20px; }
+        .btn-remove { background: #e74c3c; color: white; }
+        .info-badge { font-family: monospace; color: #f1c40f; font-size: 0.85em; }
+        #log-area { margin-top: 20px; background: #000; padding: 15px; border-radius: 5px; display: none; text-align: left; font-family: monospace; color: #0f0; border: 1px solid #333; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Generator Ikon & Fontów 1.21.8</h1>
-    <p>Dodaj obrazki i przypisz im własne skróty (np. <b>^21^</b> lub <b>:vip:</b>).</p>
+    <h1>Naprawiony Generator (Fizyczny Resize)</h1>
+    <p>Wybierz rozmiar – strona sama przeskaluje Twój plik PNG.</p>
     
-    <button class="btn-add" onclick="addRow()">+ Dodaj kolejny obrazek</button>
+    <button class="btn-add" onclick="addRow()">+ Dodaj nowy obrazek</button>
     
     <div id="items-list"></div>
 
-    <button class="btn-gen" onclick="buildPack()">POBIERZ PACZKĘ (.ZIP)</button>
+    <button class="btn-gen" onclick="buildPack()">GENERUJ I NAPRAW ROZMIARY (.ZIP)</button>
     
     <div id="log-area"></div>
 </div>
 
-<canvas id="canvas" style="display:none;"></canvas>
+<canvas id="exportCanvas" style="display:none;"></canvas>
 
 <script>
 let rowCount = 0;
 
-// Funkcja dodająca wiersz
 function addRow() {
     rowCount++;
-    // Generowanie "bezpiecznego" znaku Unicode z obszaru prywatnego (E000+)
     const hexCode = (0xE000 + rowCount).toString(16).toUpperCase();
     const char = String.fromCharCode(0xE000 + rowCount);
     
@@ -53,20 +48,15 @@ function addRow() {
     div.id = `row-${rowCount}`;
     div.innerHTML = `
         <input type="file" class="file-input" accept="image/png">
-        <div>
-            <small>Twój skrót:</small><br>
-            <input type="text" class="alias-input" placeholder="np. ^21^">
-        </div>
-        <div>
-            <small>Rozmiar:</small><br>
-            <select class="size-input">
-                <option value="16">16x16</option>
-                <option value="32">32x32</option>
-                <option value="64">64x64</option>
-                <option value="128">128x128</option>
-            </select>
-        </div>
-        <div class="char-info">Znak: \\u${hexCode}</div>
+        <input type="text" class="alias-input" placeholder="Skrót (np. ^21^)" style="width:100px;">
+        <select class="size-input">
+            <option value="16">Fizycznie 16x16</option>
+            <option value="32">Fizycznie 32x32</option>
+            <option value="64" selected>Fizycznie 64x64</option>
+            <option value="128">Fizycznie 128x128</option>
+            <option value="256">Fizycznie 256x256</option>
+        </select>
+        <span class="info-badge">Kod: \\u${hexCode}</span>
         <input type="hidden" class="unicode-char" value="${char}">
         <input type="hidden" class="unicode-hex" value="\\u${hexCode}">
         <button class="btn-remove" onclick="document.getElementById('row-${rowCount}').remove()">X</button>
@@ -74,19 +64,23 @@ function addRow() {
     document.getElementById('items-list').appendChild(div);
 }
 
-// Skalowanie obrazu
-async function processImage(file, size) {
+async function resizeAndExport(file, targetSize) {
     return new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = (e) => {
             const img = new Image();
             img.onload = () => {
-                const canvas = document.getElementById('canvas');
+                const canvas = document.getElementById('exportCanvas');
                 const ctx = canvas.getContext('2d');
-                canvas.width = size;
-                canvas.height = size;
-                ctx.clearRect(0, 0, size, size);
-                ctx.drawImage(img, 0, 0, size, size);
+                
+                // Wymuszamy DOKŁADNY rozmiar pliku wyjściowego
+                canvas.width = targetSize;
+                canvas.height = targetSize;
+                
+                ctx.clearRect(0, 0, targetSize, targetSize);
+                // Rysujemy obrazek skalując go do pełnego kwadratu (bezstratnie dla proporcji PNG)
+                ctx.drawImage(img, 0, 0, targetSize, targetSize);
+                
                 canvas.toBlob(resolve, 'image/png');
             };
             img.src = e.target.result;
@@ -95,57 +89,54 @@ async function processImage(file, size) {
     });
 }
 
-// Tworzenie ZIP
 async function buildPack() {
     const zip = new JSZip();
     const rows = document.querySelectorAll('.item-row');
-    if (rows.length === 0) return alert("Dodaj grafikę!");
+    if (rows.length === 0) return alert("Najpierw dodaj jakieś pliki!");
 
     const providers = [];
-    const fontImgFolder = zip.folder("assets/minecraft/textures/font");
-    let logText = "GOTOWE! INSTRUKCJA DLA PLUGINÓW:\n\n";
+    const fontFolder = zip.folder("assets/minecraft/textures/font");
+    let logHTML = "<b>LISTA ZNAKÓW DO SKOPIOWANIA:</b><br><br>";
 
     for (let i = 0; i < rows.length; i++) {
         const file = rows[i].querySelector('.file-input').files[0];
         const alias = rows[i].querySelector('.alias-input').value || `ikona_${i}`;
-        const size = parseInt(rows[i].querySelector('.size-input').value);
+        const targetSize = parseInt(rows[i].querySelector('.size-input').value);
         const char = rows[i].querySelector('.unicode-char').value;
         const hex = rows[i].querySelector('.unicode-hex').value;
-        const fileName = `icon_${i}.png`;
+        const fileName = `icon_${i}.png`; // Zawsze małe litery
 
         if (file) {
-            const blob = await processImage(file, size);
-            fontImgFolder.file(fileName, blob);
+            // TUTAJ DZIEJE SIĘ NAPRAWA ROZMIARU
+            const resizedBlob = await resizeAndExport(file, targetSize);
+            fontFolder.file(fileName, resizedBlob);
             
             providers.push({
                 "type": "bitmap",
                 "file": `minecraft:font/${fileName}`,
-                "ascent": 8,
-                "height": 10,
+                "ascent": 8, // Standardowa wysokość w linii tekstu
+                "height": 10, // Rozmiar wyświetlania (niezależny od px pliku)
                 "chars": [char]
             });
 
-            logText += `Jeśli zobaczysz '${alias}', zamień na kod: ${hex}\n`;
+            logHTML += `• Skrót <b>${alias}</b> -> Kod: <span style="color:#f1c40f">${hex}</span><br>`;
         }
     }
 
-    // Pliki Minecrafta
     zip.file("pack.mcmeta", JSON.stringify({
-        "pack": { "pack_format": 34, "description": "Generator Ikon 1.21.8" }
+        "pack": { "pack_format": 34, "description": "Naprawiony Pack 1.21.8" }
     }, null, 4));
 
     zip.file("assets/minecraft/font/default.json", JSON.stringify({ "providers": providers }, null, 4));
 
-    // Eksport
     const content = await zip.generateAsync({type:"blob"});
-    saveAs(content, "TexturePack_Ikon.zip");
+    saveAs(content, "Naprawiony_TexturePack.zip");
 
     const logArea = document.getElementById('log-area');
     logArea.style.display = "block";
-    logArea.innerText = logText;
+    logArea.innerHTML = logHTML + "<br><i>Wgraj paczkę do Minecrafta i użyj żółtych kodów.</i>";
 }
 
-// Pierwszy wiersz na start
 addRow();
 </script>
 
