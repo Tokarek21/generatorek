@@ -2,204 +2,187 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <title>MC Ultra Generator - Precyzyjny Ascent</title>
+    <title>MC Ultra Merger & Generator</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
         :root {
             --bg: #0f172a; --card: #1e293b; --accent: #38bdf8; --accent-hover: #0ea5e9;
-            --danger: #ef4444; --success: #22c55e; --text: #f8fafc;
+            --danger: #ef4444; --success: #22c55e; --text: #f8fafc; --warn: #f59e0b;
         }
-
-        body {
-            font-family: 'Inter', system-ui, sans-serif;
-            background-color: var(--bg); color: var(--text);
-            margin: 0; padding: 40px 20px; display: flex; justify-content: center;
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 1100px; background: var(--card); padding: 30px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); }
+        h1 { color: var(--accent); text-align: center; margin-bottom: 5px; }
+        .toolbar { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap; }
+        .btn { padding: 10px 20px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; color: white; }
+        .btn-blue { background: var(--accent); }
+        .btn-orange { background: var(--warn); }
+        .btn-green { background: var(--success); width: 100%; font-size: 1.1em; margin-top: 20px; }
+        .item-list { display: flex; flex-direction: column; gap: 10px; }
+        .item-row { 
+            display: grid; grid-template-columns: 50px 1.5fr 1fr 80px 80px 100px auto; 
+            gap: 15px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; align-items: center;
         }
-
-        .container {
-            width: 100%; max-width: 1000px; background: var(--card);
-            padding: 30px; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.3);
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-
-        h1 { font-weight: 800; color: var(--accent); text-align: center; margin-bottom: 5px; }
-        p { color: #94a3b8; text-align: center; margin-bottom: 30px; }
-
-        .btn {
-            padding: 12px 24px; border-radius: 10px; border: none; font-weight: 600;
-            cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px;
-        }
-
-        .btn-add { background: var(--accent); color: white; margin: 0 auto 30px; }
-        .btn-gen { background: var(--success); color: white; width: 100%; margin-top: 20px; font-size: 1.1em; }
-
-        .item-row {
-            background: rgba(15, 23, 42, 0.5); margin-bottom: 15px; padding: 15px;
-            border-radius: 15px; display: grid;
-            grid-template-columns: 60px 1.2fr 100px 80px 80px 100px auto;
-            gap: 10px; align-items: center; border: 1px solid rgba(255,255,255,0.05);
-        }
-
-        .preview-img {
-            width: 45px; height: 45px; background: #000; border-radius: 6px;
-            object-fit: contain; border: 2px solid #334155; image-rendering: pixelated;
-        }
-
-        input, select {
-            background: #0f172a; border: 1px solid #334155; color: white;
-            padding: 8px; border-radius: 8px; width: 100%; font-size: 0.85em;
-        }
-
-        label { font-size: 0.6rem; text-transform: uppercase; color: #64748b; font-weight: 700; display: block; margin-bottom: 4px; }
-
-        .btn-remove { background: #334155; color: var(--danger); padding: 8px; border: none; cursor: pointer; border-radius: 8px; }
-
-        #log-area {
-            margin-top: 30px; background: #000; padding: 20px; border-radius: 12px;
-            display: none; border: 1px solid var(--accent);
-        }
-
-        .code-snippet { color: #f1c40f; font-family: monospace; }
-        .hint { color: #64748b; font-size: 0.75rem; margin-top: 5px; }
+        .preview { width: 40px; height: 40px; object-fit: contain; image-rendering: pixelated; border: 1px solid #444; }
+        input, select { background: #0f172a; border: 1px solid #334155; color: white; padding: 6px; border-radius: 4px; width: 100%; }
+        label { font-size: 10px; color: #64748b; font-weight: bold; display: block; margin-bottom: 3px; }
+        #log-area { margin-top: 20px; background: #000; padding: 15px; border-radius: 10px; display: none; border-left: 4px solid var(--accent); }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>MC Ultra Generator 1.21.8</h1>
-    <p>Ustawienia precyzyjnego wyrównania ikon (Ascent).</p>
-    
-    <input type="file" id="multi-upload" multiple style="display: none;" onchange="handleFiles(this.files)">
-    <button class="btn btn-add" onclick="document.getElementById('multi-upload').click()">+ DODAJ PLIKI</button>
+    <h1>MC Ultra Merger 1.21.8</h1>
+    <p style="text-align:center; color: #94a3b8">Dodawaj nowe ikony lub połącz je z istniejącą paczką .zip</p>
 
-    <div id="items-list"></div>
+    <div class="toolbar">
+        <button class="btn btn-blue" onclick="document.getElementById('img-upload').click()">+ DODAJ IKONY PNG</button>
+        <button class="btn btn-orange" onclick="document.getElementById('zip-upload').click()">📂 POŁĄCZ Z ISTNIEJĄCYM ZIP</button>
+        <input type="file" id="img-upload" multiple style="display:none" onchange="handleImages(this.files)">
+        <input type="file" id="zip-upload" accept=".zip" style="display:none" onchange="handleZip(this.files[0])">
+    </div>
 
-    <button class="btn btn-gen" onclick="buildPack()">GENERUJ PACZKĘ .ZIP</button>
-    
+    <div id="items-list" class="item-list"></div>
+
+    <button class="btn btn-green" onclick="generateMegaPack()">GENERUJ POŁĄCZONĄ PACZKĘ</button>
+
     <div id="log-area">
-        <h3 style="margin-top:0; color: var(--accent)">Kody do gry:</h3>
-        <div id="log-content" class="code-snippet"></div>
+        <h4 style="margin:0 0 10px 0">Status operacji:</h4>
+        <div id="log-content" style="font-family: monospace; font-size: 13px; color: #38bdf8"></div>
     </div>
 </div>
 
-<canvas id="exportCanvas" style="display:none;"></canvas>
+<canvas id="canvas" style="display:none"></canvas>
 
 <script>
 let items = [];
+let baseZipFiles = {}; // Tu przechowamy pliki z wgranego ZIPa
+let existingProviders = []; // Tu przechowamy istniejące ikony z default.json
 let nextUnicode = 0xE001;
 
-function handleFiles(files) {
+// Obsługa obrazków PNG
+function handleImages(files) {
     for (let file of files) {
-        const id = Date.now() + Math.random();
-        const hex = nextUnicode.toString(16).toUpperCase();
-        const char = String.fromCharCode(nextUnicode);
-        nextUnicode++;
-
+        const id = Math.random().toString(36).substr(2, 9);
         const reader = new FileReader();
         reader.onload = (e) => {
-            // Domyślna wysokość 10 i Ascent 10 (ikona wyrównana do góry linii tekstu)
-            const item = { 
-                id, file, preview: e.target.result, hex, char, 
-                alias: file.name.split('.')[0], 
-                px: "16", height: 10, ascent: 10 
-            };
-            items.push(item);
-            renderList();
+            items.push({
+                id, file, preview: e.target.result, 
+                alias: file.name.replace('.png',''),
+                px: "16", height: 10, ascent: 9,
+                hex: nextUnicode.toString(16).toUpperCase(),
+                char: String.fromCharCode(nextUnicode)
+            });
+            nextUnicode++;
+            render();
         };
         reader.readAsDataURL(file);
     }
 }
 
-function renderList() {
-    const list = document.getElementById('items-list');
-    list.innerHTML = '';
-    items.forEach(item => {
-        const div = document.createElement('div');
-        div.className = 'item-row';
-        div.innerHTML = `
-            <img src="${item.preview}" class="preview-img">
-            <div><label>Alias</label><input type="text" value="${item.alias}" onchange="updateItem('${item.id}', 'alias', this.value)"></div>
-            <div>
-                <label>Plik PX</label>
-                <select onchange="updateItem('${item.id}', 'px', this.value)">
-                    <option value="8" ${item.px == '8' ? 'selected' : ''}>8x8</option>
-                    <option value="12" ${item.px == '12' ? 'selected' : ''}>12x12</option>
-                    <option value="16" ${item.px == '16' ? 'selected' : ''}>16x16</option>
-                    <option value="32" ${item.px == '32' ? 'selected' : ''}>32x32</option>
-                    <option value="64" ${item.px == '64' ? 'selected' : ''}>64x64</option>
-                </select>
-            </div>
-            <div><label>Wysokość</label><input type="number" value="${item.height}" onchange="updateItem('${item.id}', 'height', this.value)"></div>
-            <div><label>Ascent</label><input type="number" value="${item.ascent}" onchange="updateItem('${item.id}', 'ascent', this.value)"></div>
-            <div style="text-align:center"><label>Kod</label><span class="code-snippet">\\u${item.hex}</span></div>
-            <button class="btn btn-remove" onclick="removeItem('${item.id}')">✕</button>
-        `;
-        list.appendChild(div);
-    });
+// Obsługa importu ZIP
+async function handleZip(file) {
+    if(!file) return;
+    const zip = await JSZip.loadAsync(file);
+    baseZipFiles = zip.files;
+    
+    // Szukamy istniejącego default.json, żeby nie nadpisać ikon innych osób
+    const fontPath = "assets/minecraft/font/default.json";
+    if (zip.file(fontPath)) {
+        const content = await zip.file(fontPath).async("string");
+        try {
+            const json = JSON.parse(content);
+            existingProviders = json.providers || [];
+            addLog(`Wczytano ${existingProviders.length} istniejących dostawców czcionek.`);
+        } catch(e) { addLog("Błąd czytania default.json - plik może być uszkodzony."); }
+    }
+    addLog("Paczka ZIP wczytana do pamięci. Nowe ikony zostaną do niej dopisane.");
 }
 
-function updateItem(id, key, val) {
-    const item = items.find(i => i.id == id);
-    if(item) item[key] = (key === 'height' || key === 'ascent') ? parseInt(val) : val;
+function render() {
+    const container = document.getElementById('items-list');
+    container.innerHTML = items.map(item => `
+        <div class="item-row">
+            <img src="${item.preview}" class="preview">
+            <div><label>Nazwa</label><input type="text" value="${item.alias}" onchange="update('${item.id}', 'alias', this.value)"></div>
+            <div><label>Rozmiar</label><select onchange="update('${item.id}', 'px', this.value)">
+                <option value="16">16x16</option><option value="32">32x32</option><option value="64">64x64</option>
+            </select></div>
+            <div><label>Height</label><input type="number" value="${item.height}" onchange="update('${item.id}', 'height', this.value)"></div>
+            <div><label>Ascent</label><input type="number" value="${item.ascent}" onchange="update('${item.id}', 'ascent', this.value)"></div>
+            <div style="text-align:center"><label>Kod</label>\\u${item.hex}</div>
+            <button class="btn" style="background:var(--danger)" onclick="remove('${item.id}')">✕</button>
+        </div>
+    `).join('');
 }
 
-function removeItem(id) {
-    items = items.filter(i => i.id != id);
-    renderList();
+function update(id, key, val) {
+    let it = items.find(i => i.id === id);
+    if(it) it[key] = (key === 'height' || key === 'ascent') ? parseInt(val) : val;
 }
 
-async function resizeImage(file, targetSize) {
-    return new Promise((resolve) => {
-        const img = new Image();
-        img.onload = () => {
-            const canvas = document.getElementById('exportCanvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = targetSize; canvas.height = targetSize;
-            ctx.imageSmoothingEnabled = false;
-            ctx.clearRect(0, 0, targetSize, targetSize);
-            ctx.drawImage(img, 0, 0, targetSize, targetSize);
-            canvas.toBlob(resolve, 'image/png');
-        };
-        img.src = URL.createObjectURL(file);
-    });
+function remove(id) { items = items.filter(i => i.id !== id); render(); }
+
+function addLog(msg) {
+    document.getElementById('log-area').style.display = 'block';
+    document.getElementById('log-content').innerHTML += "> " + msg + "<br>";
 }
 
-async function buildPack() {
-    if (items.length === 0) return alert("Dodaj pliki!");
+async function generateMegaPack() {
     const zip = new JSZip();
-    const fontFolder = zip.folder("assets/minecraft/textures/font");
-    const providers = [];
-    let logHTML = "";
+    
+    // 1. Kopiujemy stare pliki (jeśli były)
+    for (let path in baseZipFiles) {
+        if (!baseZipFiles[path].dir) {
+            const content = await baseZipFiles[path].async("blob");
+            zip.file(path, content);
+        }
+    }
 
+    // 2. Dodajemy nowe ikony
+    const newProviders = [...existingProviders];
     for (let i = 0; i < items.length; i++) {
         const item = items[i];
-        const fileName = `icon_${i}.png`;
+        const fileName = `custom_icon_${Date.now()}_${i}.png`;
+        const path = `assets/minecraft/textures/font/${fileName}`;
+        
+        // Render PNG
+        const blob = await new Promise(res => {
+            const img = new Image();
+            img.onload = () => {
+                const cvs = document.getElementById('canvas');
+                cvs.width = cvs.height = parseInt(item.px);
+                const ctx = cvs.getContext('2d');
+                ctx.imageSmoothingEnabled = false;
+                ctx.drawImage(img, 0, 0, cvs.width, cvs.height);
+                cvs.toBlob(res);
+            };
+            img.src = item.preview;
+        });
 
-        const blob = await resizeImage(item.file, parseInt(item.px));
-        fontFolder.file(fileName, blob);
-
-        providers.push({
+        zip.file(path, blob);
+        newProviders.push({
             "type": "bitmap",
             "file": `minecraft:font/${fileName}`,
             "ascent": item.ascent,
             "height": item.height,
             "chars": [item.char]
         });
-
-        logHTML += `<strong>${item.alias}</strong>: \\u${item.hex} (H: ${item.height}, A: ${item.ascent})<br>`;
+        addLog(`Dodano: ${item.alias} -> \\u${item.hex}`);
     }
 
-    zip.file("pack.mcmeta", JSON.stringify({ "pack": { "pack_format": 34, "description": "Custom Icons Ascent Fix" } }));
-    zip.file("assets/minecraft/font/default.json", JSON.stringify({ "providers": providers }, null, 4));
+    // 3. Zapisujemy połączony plik fontów
+    zip.file("assets/minecraft/font/default.json", JSON.stringify({ providers: newProviders }, null, 4));
+    
+    // 4. Upewniamy się, że jest pack.mcmeta
+    if (!zip.file("pack.mcmeta")) {
+        zip.file("pack.mcmeta", JSON.stringify({ pack: { pack_format: 34, description: "Merged Ultra Pack" } }));
+    }
 
-    const content = await zip.generateAsync({type:"blob"});
-    saveAs(content, "Icons_Pack_1.21.8.zip");
-
-    document.getElementById('log-area').style.display = 'block';
-    document.getElementById('log-content').innerHTML = logHTML;
+    const final = await zip.generateAsync({type:"blob"});
+    saveAs(final, "Merged_Minecraft_Pack.zip");
+    addLog("Gotowe! Paczka została pobrana.");
 }
 </script>
-
 </body>
 </html>
