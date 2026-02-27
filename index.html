@@ -2,7 +2,7 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <title>MC Ultra Generator 1.21.8</title>
+    <title>MC Ultra Generator 1.21.8 - Rangi Edition</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
@@ -28,7 +28,7 @@
 
         .container {
             width: 100%;
-            max-width: 900px;
+            max-width: 950px;
             background: var(--card);
             padding: 30px;
             border-radius: 20px;
@@ -36,8 +36,8 @@
             border: 1px solid rgba(255,255,255,0.1);
         }
 
-        h1 { font-weight: 800; letter-spacing: -1px; margin-bottom: 10px; color: var(--accent); }
-        p { color: #94a3b8; margin-bottom: 30px; }
+        h1 { font-weight: 800; letter-spacing: -1px; margin-bottom: 5px; color: var(--accent); text-align: center; }
+        p { color: #94a3b8; margin-bottom: 30px; text-align: center; }
 
         .controls-top {
             display: flex;
@@ -61,7 +61,7 @@
         .btn-add { background: var(--accent); color: white; }
         .btn-add:hover { background: var(--accent-hover); transform: translateY(-2px); }
         .btn-gen { background: var(--success); color: white; width: 100%; margin-top: 20px; font-size: 1.1em; }
-        .btn-gen:hover { filter: brightness(1.1); transform: scale(1.02); }
+        .btn-gen:hover { filter: brightness(1.1); transform: scale(1.01); }
 
         .item-row {
             background: rgba(15, 23, 42, 0.5);
@@ -69,8 +69,8 @@
             padding: 20px;
             border-radius: 15px;
             display: grid;
-            grid-template-columns: 80px 1.5fr 1fr 1fr 1fr auto;
-            gap: 15px;
+            grid-template-columns: 70px 1.5fr 1fr 1fr 1fr auto;
+            gap: 12px;
             align-items: center;
             animation: fadeIn 0.3s ease-out;
             border: 1px solid rgba(255,255,255,0.05);
@@ -79,26 +79,28 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
         .preview-img {
-            width: 60px;
-            height: 60px;
+            width: 50px;
+            height: 50px;
             background: #000;
-            border-radius: 8px;
+            border-radius: 6px;
             object-fit: contain;
             border: 2px solid #334155;
+            image-rendering: pixelated;
         }
 
         input, select {
             background: #0f172a;
             border: 1px solid #334155;
             color: white;
-            padding: 8px 12px;
+            padding: 8px;
             border-radius: 8px;
             width: 100%;
+            font-size: 0.9em;
         }
 
-        label { font-size: 0.7rem; text-transform: uppercase; color: #64748b; font-weight: 700; display: block; margin-bottom: 5px; }
+        label { font-size: 0.65rem; text-transform: uppercase; color: #64748b; font-weight: 700; display: block; margin-bottom: 5px; }
 
-        .btn-remove { background: #334155; color: var(--danger); padding: 8px; }
+        .btn-remove { background: #334155; color: var(--danger); padding: 8px; border-radius: 8px; border:none; cursor:pointer; }
         .btn-remove:hover { background: var(--danger); color: white; }
 
         #log-area {
@@ -111,18 +113,18 @@
             border: 1px solid var(--accent);
         }
 
-        .code-snippet { color: #f1c40f; font-family: 'Fira Code', monospace; font-size: 0.9em; }
+        .code-snippet { color: #f1c40f; font-family: 'Fira Code', monospace; font-size: 0.85em; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h1>MC Ultra Generator 1.21.8</h1>
-    <p>Wrzuć wiele plików naraz, ustaw rozdzielczość i ciesz się ikonami w grze.</p>
+    <p>Twórz ikony przedmiotów i rangi z precyzyjną rozdzielczością.</p>
     
     <div class="controls-top">
         <input type="file" id="multi-upload" multiple style="display: none;" onchange="handleFiles(this.files)">
-        <button class="btn btn-add" onclick="document.getElementById('multi-upload').click()">+ DODAJ PLIKI</button>
+        <button class="btn btn-add" onclick="document.getElementById('multi-upload').click()">+ DODAJ IKONY / RANGI</button>
     </div>
 
     <div id="items-list"></div>
@@ -130,7 +132,7 @@
     <button class="btn btn-gen" onclick="buildPack()">GENERUJ PACZKĘ .ZIP</button>
     
     <div id="log-area">
-        <h3 style="margin-top:0">Twoje kody Unicode:</h3>
+        <h3 style="margin-top:0; color: var(--accent)">Twoje kody Unicode:</h3>
         <div id="log-content" class="code-snippet"></div>
     </div>
 </div>
@@ -150,7 +152,17 @@ function handleFiles(files) {
 
         const reader = new FileReader();
         reader.onload = (e) => {
-            const item = { id, file, preview: e.target.result, hex, char, alias: file.name.split('.')[0] };
+            // Domyślnie dla nowych plików ustawiamy 16px (dobre dla rang)
+            const item = { 
+                id, 
+                file, 
+                preview: e.target.result, 
+                hex, 
+                char, 
+                alias: file.name.split('.')[0], 
+                px: "16", 
+                height: "10" 
+            };
             items.push(item);
             renderList();
         };
@@ -166,17 +178,19 @@ function renderList() {
         div.className = 'item-row';
         div.innerHTML = `
             <img src="${item.preview}" class="preview-img">
-            <div><label>Skrót</label><input type="text" value="${item.alias}" onchange="updateItem('${item.id}', 'alias', this.value)"></div>
+            <div><label>Nazwa (Alias)</label><input type="text" value="${item.alias}" onchange="updateItem('${item.id}', 'alias', this.value)"></div>
             <div>
-                <label>Fizyczne PX</label>
+                <label>Rozmiar Pliku (PX)</label>
                 <select onchange="updateItem('${item.id}', 'px', this.value)">
-                    <option value="16">16x16</option>
-                    <option value="32">32x32</option>
-                    <option value="64" selected>64x64</option>
-                    <option value="128">128x128</option>
+                    <option value="8" ${item.px == '8' ? 'selected' : ''}>8x8 (Mini)</option>
+                    <option value="12" ${item.px == '12' ? 'selected' : ''}>12x12 (Ranga)</option>
+                    <option value="16" ${item.px == '16' ? 'selected' : ''}>16x16 (Standard)</option>
+                    <option value="32" ${item.px == '32' ? 'selected' : ''}>32x32</option>
+                    <option value="64" ${item.px == '64' ? 'selected' : ''}>64x64</option>
+                    <option value="128" ${item.px == '128' ? 'selected' : ''}>128x128</option>
                 </select>
             </div>
-            <div><label>Wielkość w grze</label><input type="number" value="10" onchange="updateItem('${item.id}', 'height', this.value)"></div>
+            <div><label>Wysokość w grze</label><input type="number" value="${item.height}" onchange="updateItem('${item.id}', 'height', this.value)"></div>
             <div style="text-align:center"><label>Kod</label><span class="code-snippet">\\u${item.hex}</span></div>
             <button class="btn btn-remove" onclick="removeItem('${item.id}')">✕</button>
         `;
@@ -202,7 +216,12 @@ async function resizeImage(file, targetSize) {
             const ctx = canvas.getContext('2d');
             canvas.width = targetSize;
             canvas.height = targetSize;
-            ctx.imageSmoothingEnabled = false; // Pixel-art look
+            
+            // Kluczowe dla małych ikon - wyłączenie wygładzania (sharp pixels)
+            ctx.imageSmoothingEnabled = false; 
+            ctx.webkitImageSmoothingEnabled = false;
+            ctx.mozImageSmoothingEnabled = false;
+
             ctx.clearRect(0, 0, targetSize, targetSize);
             ctx.drawImage(img, 0, 0, targetSize, targetSize);
             canvas.toBlob(resolve, 'image/png');
@@ -220,8 +239,8 @@ async function buildPack() {
 
     for (let i = 0; i < items.length; i++) {
         const item = items[i];
-        const px = parseInt(item.px || 64);
-        const h = parseInt(item.height || 10);
+        const px = parseInt(item.px);
+        const h = parseInt(item.height);
         const fileName = `icon_${i}.png`;
 
         const blob = await resizeImage(item.file, px);
@@ -235,10 +254,10 @@ async function buildPack() {
             "chars": [item.char]
         });
 
-        logHTML += `Skrót ${item.alias} -> \\u${item.hex}<br>`;
+        logHTML += `<strong>${item.alias}</strong>: <span style="color:#fff">\\u${item.hex}</span><br>`;
     }
 
-    zip.file("pack.mcmeta", JSON.stringify({ "pack": { "pack_format": 34, "description": "Ultra Pack 1.21.8" } }));
+    zip.file("pack.mcmeta", JSON.stringify({ "pack": { "pack_format": 34, "description": "MC Ultra Ranks Pack 1.21.8" } }));
     zip.file("assets/minecraft/font/default.json", JSON.stringify({ "providers": providers }, null, 4));
 
     const content = await zip.generateAsync({type:"blob"});
